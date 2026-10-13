@@ -7,6 +7,8 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
+  static const String actionComplete = 'action_complete';
+
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -15,11 +17,15 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  Future<void> Function(String taskId)? onTaskCompletedFromNotification;
 
   Future<void> initialize({
     void Function(NotificationResponse)? onNotificationTapped,
+    Future<void> Function(String taskId)? onTaskCompleted,
   }) async {
     if (_isInitialized) return;
+
+    onTaskCompletedFromNotification = onTaskCompleted;
 
     // 1. Initialize Timezones
     tz.initializeTimeZones();
@@ -35,16 +41,30 @@ class NotificationService {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false, // We'll request explicitly
+    final DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'ems_duty_category',
+          actions: [
+            DarwinNotificationAction.plain(
+              actionComplete,
+              'Mark as Done',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.destructive,
+              },
+            ),
+          ],
+        ),
+      ],
     );
 
     const LinuxInitializationSettings linuxSettings =
         LinuxInitializationSettings(defaultActionName: 'Open');
 
-    const InitializationSettings initSettings = InitializationSettings(
+    final InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
       linux: linuxSettings,
@@ -52,7 +72,13 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin.initialize(
       settings: initSettings,
-      onDidReceiveNotificationResponse: onNotificationTapped,
+      onDidReceiveNotificationResponse: (response) async {
+        if (response.actionId == actionComplete && response.payload != null) {
+          debugPrint('Mark as done tapped from notification for task: ${response.payload}');
+          await onTaskCompletedFromNotification?.call(response.payload!);
+        }
+        onNotificationTapped?.call(response);
+      },
     );
 
     // 3. Create High-Priority Notification Channel for Android
@@ -102,7 +128,7 @@ class NotificationService {
     return true;
   }
 
-  /// Schedule an alarm-style notification for a specific date and time
+  /// Schedule an alarm-style notification for a specific date and time with interactive actions
   Future<void> scheduleAlarmNotification({
     required int id,
     required String title,
@@ -125,6 +151,14 @@ class NotificationService {
       fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,
       ticker: 'EMS Duty Reminder',
+      actions: const [
+        AndroidNotificationAction(
+          actionComplete,
+          'Mark as Done',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -132,6 +166,7 @@ class NotificationService {
       presentBadge: true,
       presentSound: true,
       interruptionLevel: InterruptionLevel.timeSensitive,
+      categoryIdentifier: 'ems_duty_category',
     );
 
     final notificationDetails = NotificationDetails(

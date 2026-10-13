@@ -9,14 +9,19 @@ import 'package:home_widget/home_widget.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Initialize Notification service
+  final container = ProviderContainer();
+
+  // 1. Initialize Notification service with interactive "Mark Done" action handler
   final notificationService = NotificationService();
-  await notificationService.initialize();
+  await notificationService.initialize(
+    onTaskCompleted: (taskId) async {
+      final repo = container.read(emsTaskRepositoryProvider);
+      await repo.toggleTaskCompletion(taskId, true);
+    },
+  );
 
   // 2. Request notification permissions (Android 13+ & iOS)
   await notificationService.requestPermissions();
-
-  final container = ProviderContainer();
 
   // 3. Initial sync for Home Screen Widget & Notifications
   try {

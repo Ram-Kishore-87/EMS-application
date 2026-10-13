@@ -1,5 +1,6 @@
 import 'package:ems_app/core/theme/app_theme.dart';
 import 'package:ems_app/features/progress/presentation/controllers/progress_providers.dart';
+import 'package:ems_app/features/progress/presentation/widgets/performance_breakdown_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,11 +15,21 @@ class ProgressHeader extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (ctx) => const PerformanceBreakdownSheet(),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -186,8 +197,29 @@ class ProgressHeader extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Tap for department & staff breakdown',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryColor.withAlpha(200),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 11,
+                  color: AppTheme.primaryColor.withAlpha(200),
+                ),
+              ],
+            ),
           ],
         ),
+      ),
       ),
     );
   }
