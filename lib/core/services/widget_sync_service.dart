@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:ems_app/core/constants/widget_constants.dart';
 import 'package:ems_app/core/extensions/date_time_extensions.dart';
 import 'package:ems_app/features/ems_tasks/data/database/app_database.dart';
@@ -16,6 +17,12 @@ class WidgetSyncService {
 
   /// Serializes next 7 days of tasks (prioritizing today & tomorrow) and progress metrics into shared storage
   Future<void> syncWidgetData() async {
+    // home_widget is native to Android & iOS only
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      debugPrint('Skipping widget sync on non-mobile platform.');
+      return;
+    }
+
     try {
       // Set App Group for iOS WidgetKit
       await HomeWidget.setAppGroupId(WidgetConstants.appGroupId);
